@@ -26,7 +26,7 @@ def s3connect(preserve_acl=False, insecure=False, ordinarycallingformat=False, h
 	return c
 	
 
-def copy_s3_bucket(SOURCE_BUCKET, DEST_BUCKET, prefix=None, threads=10, preserve_acl=False, insecure=False, ordinarycallingformat=False, host=None, debug=None):
+def copy_s3_bucket(SOURCE_BUCKET, DEST_BUCKET, prefix=None, threads=10, preserve_acl=False, insecure=False, ordinarycallingformat=False, host=None, debug=None, rewrite=False):
 	"""
 	Example usage: copy_s3_bucket(SOURCE_BUCKET='my-source-bucket', DEST_BUCKET='my-destination-bucket', prefix='parent/child/dir/', threads=20)
 	"""
@@ -52,7 +52,7 @@ def copy_s3_bucket(SOURCE_BUCKET, DEST_BUCKET, prefix=None, threads=10, preserve
 			thread_key = thread_bucket.get_key(self.key_name)
 
 			# Only copy if not exists on dest bucket
-			if not thread_dest_bucket.get_key(self.key_name):
+			if not thread_dest_bucket.get_key(self.key_name) or rewrite:
 				pool_sema.acquire()
 				self.status = "%s : Sempahore Acquired, Copy Next" % datetime.datetime.now()
 				try:
@@ -138,6 +138,10 @@ def main():
 			'debug output from boto, and 2 means boto debug output plus ' + \
 			'request/response output from httplib.'
 		)
+	parser.add_argument(
+		'--rewrite', action='store_true',
+		help='rewrite object in destination, even if it already exist'
+		)
 		
 
 	parser.add_argument('SOURCE', help=argparse.SUPPRESS)
@@ -153,7 +157,17 @@ def main():
 	AWS_ACCESS_KEY_ID = args.access_key
 	AWS_SECRET_ACCESS_KEY = args.secret_access_key
 
-	copy_s3_bucket(args.SOURCE, args.DESTINATION, threads=args.threads, insecure=args.insecure, ordinarycallingformat=args.ordinarycallingformat, preserve_acl=args.preserve_acl, host=args.host, debug=args.debug)
+	copy_s3_bucket(
+		args.SOURCE,
+		args.DESTINATION,
+		threads=args.threads,
+		insecure=args.insecure,
+		ordinarycallingformat=args.ordinarycallingformat,
+		preserve_acl=args.preserve_acl,
+		host=args.host,
+		debug=args.debug,
+		rewrite=args.rewrite
+		)
 
 if __name__ == "__main__":
     main()
